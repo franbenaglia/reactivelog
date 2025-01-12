@@ -13,7 +13,7 @@ import reactor.core.publisher.Flux;
 @Component
 public class ClimateStreamSourceMock {
 
-    private static final long TIME_GAP = 400L;
+    private static final long TIME_GAP = 1000L;
 
     private static final float MAX_TEMP_AVERAGE = 30.0f;
     private static final float MIN_TEMP_AVERAGE = -5.0f;
@@ -32,26 +32,33 @@ public class ClimateStreamSourceMock {
         return Math.random() * (SLOPE_MAX - SLOPE_MIN);
     }
 
-    private Climate maxBoundaryClimate() {
+    private long randomLong() {
+        return (long) (Math.random() * 100000);
+    }
+
+    private Climate maxBoundaryClimate(long channel) {
 
         double temperature = (Math.random() * MAX_TEMP_VARIATION) * aleatorySign() + MAX_TEMP_AVERAGE;
         double humidity = 50.0;
 
-        return new Climate(temperature, humidity);
+        return new Climate(temperature, humidity, channel);
     }
 
-    private Climate minBoundaryClimate() {
+    private Climate minBoundaryClimate(long channel) {
 
         double temperature = (Math.random() * MIN_TEMP_VARIATION * aleatorySign()) + MIN_TEMP_AVERAGE;
         double humidity = 40.0;
 
-        return new Climate(temperature, humidity);
+        return new Climate(temperature, humidity, channel);
     }
 
+    //https://www.npmjs.com/package/node-port-scanner
     public Flux<Climate> getClimateData() {
 
-        Climate maxBoundaryClimate = maxBoundaryClimate();
-        Climate minBoundaryClimate = minBoundaryClimate();
+        long channel = randomLong();
+
+        Climate maxBoundaryClimate = maxBoundaryClimate(channel);
+        Climate minBoundaryClimate = minBoundaryClimate(channel);
 
         double slope = slope();
 
@@ -61,18 +68,20 @@ public class ClimateStreamSourceMock {
 
         final double rate = (maxBoundaryClimate.temperature() - minBoundaryClimate.temperature()) / slope;
 
-        UnaryOperator<Climate> opx = x -> {
+        UnaryOperator<Climate> opx = c -> {
 
-            if (x.temperature() < maxBoundaryClimate.temperature() && wrapper.rising) {
-                return new Climate(x.temperature() + rate, 10);
+            float v = aleatorySign();
+
+            if (c.temperature() < maxBoundaryClimate.temperature() && wrapper.rising) {
+                return new Climate(c.temperature() + rate, c.humidity(), v == 1 ? channel : 400);
             } else {
                 wrapper.rising = false;
             }
-            if (x.temperature() > minBoundaryClimate.temperature() && !wrapper.rising) {
-                return new Climate(x.temperature() - rate, 10);
+            if (c.temperature() > minBoundaryClimate.temperature() && !wrapper.rising) {
+                return new Climate(c.temperature() - rate, c.humidity(), v == 1 ? channel : 400);
             } else {
                 wrapper.rising = true;
-                return new Climate(x.temperature() - rate, 10);
+                return new Climate(c.temperature() - rate, c.humidity(), channel);
             }
 
         };

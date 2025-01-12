@@ -13,9 +13,7 @@ public class ReactivelogApplication {
 
 		ConfigurableApplicationContext context =  SpringApplication.run(ReactivelogApplication.class, args);
         TestClient testClient = context.getBean(TestClient.class);
-		testClient.getDataVoid();;
-
-
+		testClient.getDataVoid();
 
 	}
 
